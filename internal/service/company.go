@@ -3,8 +3,9 @@ package service
 import (
 	"context"
 
-	"github.com/djurica-surla/golang-exercise/internal/entity"
 	"github.com/google/uuid"
+
+	"github.com/djurica-surla/golang-exercise/internal/entity"
 )
 
 // CompanyStorer represents necessary company storage implementation for Company service.

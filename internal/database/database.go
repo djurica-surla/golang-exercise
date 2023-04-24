@@ -55,7 +55,6 @@ func Connect(
 	log.Println("Postgres database connection successful")
 
 	return db, nil
-
 }
 
 // Migrate makes sure database migrations are up to date.

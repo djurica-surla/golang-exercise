@@ -1,6 +1,6 @@
 -- Create company type
 DROP TYPE IF EXISTS company_type;
-CREATE TYPE company_type AS ENUM ('Corporations', 'NonProfit', 'Cooperative', 'SoleProprietorship');
+CREATE TYPE company_type AS ENUM ('Corporation', 'NonProfit', 'Cooperative', 'SoleProprietorship');
 
 -- Create companies table
 CREATE TABLE IF NOT EXISTS companies (

@@ -5,8 +5,9 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/djurica-surla/golang-exercise/internal/entity"
 	"github.com/google/uuid"
+
+	"github.com/djurica-surla/golang-exercise/internal/entity"
 )
 
 // Represents implementation of company storage.

@@ -2,11 +2,17 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
+	"net/http"
+
+	"github.com/gorilla/mux"
 
 	"github.com/djurica-surla/golang-exercise/internal/config"
 	"github.com/djurica-surla/golang-exercise/internal/database"
+	"github.com/djurica-surla/golang-exercise/internal/service"
 	"github.com/djurica-surla/golang-exercise/internal/storage"
+	transporthttp "github.com/djurica-surla/golang-exercise/internal/transport/http"
 )
 
 func main() {
@@ -36,5 +42,21 @@ func main() {
 	}
 
 	// Instantiate company store.
-	_ = storage.NewCompanyStore(connection)
+	companyStore := storage.NewCompanyStore(connection)
+
+	// Instantiate company service.
+	companyService := service.NewCompanyService(companyStore)
+
+	// Instantiate mux router.
+	router := mux.NewRouter().StrictSlash(true)
+
+	// Instantiate company handler.
+	handler := transporthttp.NewCompanyHandler(companyService)
+
+	// Register routes for company handler.
+	handler.RegisterRoutes(router)
+
+	// Start the http server.
+	log.Printf("starting server on port %s", cfg.Port)
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", cfg.Port), router))
 }

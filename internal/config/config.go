@@ -9,6 +9,7 @@ import (
 // A struct which holds the app configuration.
 type Config struct {
 	PostgresConfig PostgresConfig `mapstructure:"postgresConfig"`
+	Port           string         `mapstructure:"port"`
 }
 
 type PostgresConfig struct {
