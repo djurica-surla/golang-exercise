@@ -1,0 +1,8 @@
+{
+  "postgresConfig": {
+    "host": "db",
+    "user": "myuser",
+    "password": "mypassword",
+    "dbName": "mydb"
+  }
+}
