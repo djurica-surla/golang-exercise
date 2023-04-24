@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+set -e
+
+if [ -z "$1" ]
+then
+      echo "Usage: $0 migration_name"
+      echo "       no migration name provided!"
+      exit 1
+fi
+
+desc=$1
+epoch=$(date +%s)
+dir=$(dirname "$0")
+touch "${dir}"/"${epoch}"_"${desc}".down.sql
+touch "${dir}"/"${epoch}"_"${desc}".up.sql

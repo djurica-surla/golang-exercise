@@ -6,6 +6,7 @@ import (
 
 	"github.com/djurica-surla/golang-exercise/internal/config"
 	"github.com/djurica-surla/golang-exercise/internal/database"
+	"github.com/djurica-surla/golang-exercise/internal/storage"
 )
 
 func main() {
@@ -13,7 +14,7 @@ func main() {
 	cfg := config.LoadAppConfig()
 
 	// Attempt to establish a connection with the database.
-	_, err := database.Connect(
+	connection, err := database.Connect(
 		context.Background(),
 		database.DBConfig{
 			Host:     cfg.PostgresConfig.Host,
@@ -25,5 +26,15 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println("Postgres database connection successful")
+
+	defer connection.Close()
+
+	// Run up migrations to create database schema.
+	err = database.Migrate(connection)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Instantiate company store.
+	_ = storage.NewCompanyStore(connection)
 }
