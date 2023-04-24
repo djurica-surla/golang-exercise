@@ -1,0 +1,14 @@
+# Use the official Go base image
+FROM golang:1.19-alpine
+
+# Set the working directory inside the container
+WORKDIR /app
+
+# Copy the Go application source code to the container
+COPY . .
+
+#  Install gcc
+RUN apk add build-base
+
+# Run tests and exit
+RUN go test --tags=integration ./... && exit 0 || exit 1

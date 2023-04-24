@@ -16,5 +16,8 @@ lint-fix:
 
 # Runs the docker compose to create the app and postgres instance. 
 # If config isn't changed this should be everything necessary to test the app which will be opened locally on port 8080.
-up:
-	docker compose up --build
+start:
+	docker compose -f docker-compose.production.yaml up --build
+
+test-integration:
+	docker compose -f test/docker-compose.integration.yaml up --build --abort-on-container-exit --remove-orphans
