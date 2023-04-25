@@ -11,15 +11,16 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 
+	httpError "github.com/djurica-surla/golang-exercise/internal/errors"
 	"github.com/djurica-surla/golang-exercise/internal/model"
 )
 
 // RegisterRoutes links routes with the handler.
 func (h *CompanyHandler) RegisterRoutes(router *mux.Router) {
-	router.HandleFunc("/companies/{id}", h.GetCompany()).Methods(http.MethodGet)
-	router.HandleFunc("/companies", h.CreateCompany()).Methods(http.MethodPost)
-	router.HandleFunc("/companies/{id}", h.UpdateCompany()).Methods(http.MethodPatch)
-	router.HandleFunc("/companies/{id}", h.DeleteCompany()).Methods(http.MethodDelete)
+	router.HandleFunc("/companies/{id}", handleError(h.GetCompany)).Methods(http.MethodGet)
+	router.HandleFunc("/companies", handleError(h.CreateCompany)).Methods(http.MethodPost)
+	router.HandleFunc("/companies/{id}", handleError(h.UpdateCompany)).Methods(http.MethodPatch)
+	router.HandleFunc("/companies/{id}", handleError(h.DeleteCompany)).Methods(http.MethodDelete)
 }
 
 // CompanyServicer represents necessary company service implementation for company handler.
@@ -29,6 +30,9 @@ type CompanyServicer interface {
 	UpdateCompany(ctx context.Context, company model.CompanyCreate, companyID uuid.UUID) error
 	DeleteCompany(ctx context.Context, companyID uuid.UUID) error
 }
+
+// Custom handler func which allows returning error so that they can be handled in once place.
+type handlerFunc func(w http.ResponseWriter, r *http.Request) (interface{}, error)
 
 // CompanyHandler handles http requests for companies.
 type CompanyHandler struct {
@@ -42,114 +46,130 @@ func NewCompanyHandler(companyService CompanyServicer) *CompanyHandler {
 	}
 }
 
+// Message will be returned as a response.
+type Message struct {
+	Status string `json:"status"`
+	Info   string `json:"info"`
+}
+
 // GetCompanyById handles retrieveing company by the id.
-func (h *CompanyHandler) GetCompany() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		uuidString := mux.Vars(r)["id"]
-		companyID, err := uuid.Parse(uuidString)
-		if err != nil {
-			h.encodeErrorWithStatus404(err, w)
-		}
-
-		res, err := h.companyService.GetCompanyByID(r.Context(), companyID)
-		if err != nil {
-			h.encodeErrorWithStatus500(err, w)
-			return
-		}
-
-		json.NewEncoder(w).Encode(res)
+func (h *CompanyHandler) GetCompany(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	uuidString := mux.Vars(r)["id"]
+	companyID, err := uuid.Parse(uuidString)
+	if err != nil {
+		return nil, httpError.NewBadRequestError(err)
 	}
+
+	res, err := h.companyService.GetCompanyByID(r.Context(), companyID)
+	if err != nil {
+		return nil, httpError.NewInternalServerError(err)
+	}
+
+	return res, nil
 }
 
 // CreateCompany handles creating a company.
-func (h *CompanyHandler) CreateCompany() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var company model.CompanyCreate
+func (h *CompanyHandler) CreateCompany(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 
-		err := json.NewDecoder(r.Body).Decode(&company)
-		if err != nil {
-			h.encodeErrorWithStatus404(err, w)
-			return
-		}
+	var company model.CompanyCreate
 
-		err = h.ValidateModel(company)
-		if err != nil {
-			h.encodeErrorWithStatus404(err, w)
-			return
-		}
-
-		ok, validTypes := company.IsValidType()
-		if !ok {
-			h.encodeErrorWithStatus404(fmt.Errorf("invalid company type, must be one of these: %s", validTypes), w)
-			return
-		}
-
-		companyID, err := h.companyService.CreateCompany(r.Context(), company)
-		if err != nil {
-			h.encodeErrorWithStatus500(err, w)
-			return
-		}
-
-		json.NewEncoder(w).Encode(fmt.Sprintf("Successfully created a company with the id: %s", companyID))
+	err := json.NewDecoder(r.Body).Decode(&company)
+	if err != nil {
+		return nil, httpError.NewBadRequestError(err)
 	}
+
+	err = h.ValidateModel(company)
+	if err != nil {
+		return nil, httpError.NewBadRequestError(err)
+	}
+
+	ok, validTypes := company.IsValidType()
+	if !ok {
+		return nil, httpError.NewBadRequestError(fmt.Errorf("invalid company type, must be one of these: %s", validTypes))
+	}
+
+	companyID, err := h.companyService.CreateCompany(r.Context(), company)
+	if err != nil {
+		return nil, httpError.NewInternalServerError(err)
+	}
+
+	return companyID, nil
 }
 
 // UpdateCompany handles updating a company.
-func (h *CompanyHandler) UpdateCompany() http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var company model.CompanyCreate
+func (h *CompanyHandler) UpdateCompany(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	var company model.CompanyCreate
 
-		uuidString := mux.Vars(r)["id"]
-		companyID, err := uuid.Parse(uuidString)
-		if err != nil {
-			h.encodeErrorWithStatus404(err, w)
-		}
-
-		err = json.NewDecoder(r.Body).Decode(&company)
-		if err != nil {
-			h.encodeErrorWithStatus404(err, w)
-			return
-		}
-
-		err = h.ValidateModel(company)
-		if err != nil {
-			h.encodeErrorWithStatus404(err, w)
-			return
-		}
-
-		ok, validTypes := company.IsValidType()
-		if !ok {
-			h.encodeErrorWithStatus404(fmt.Errorf("invalid company type, must be one of these: %s", validTypes), w)
-			return
-		}
-
-		err = h.companyService.UpdateCompany(r.Context(), company, companyID)
-		if err != nil {
-			h.encodeErrorWithStatus500(err, w)
-			return
-		}
-
-		json.NewEncoder(w).Encode("Successfully updated a company")
+	uuidString := mux.Vars(r)["id"]
+	companyID, err := uuid.Parse(uuidString)
+	if err != nil {
+		return nil, httpError.NewBadRequestError(err)
 	}
+
+	err = json.NewDecoder(r.Body).Decode(&company)
+	if err != nil {
+		return nil, httpError.NewBadRequestError(err)
+	}
+
+	err = h.ValidateModel(company)
+	if err != nil {
+		return nil, httpError.NewBadRequestError(err)
+	}
+
+	ok, validTypes := company.IsValidType()
+	if !ok {
+		return nil, httpError.NewBadRequestError(fmt.Errorf("invalid company type, must be one of these: %s", validTypes))
+	}
+
+	err = h.companyService.UpdateCompany(r.Context(), company, companyID)
+	if err != nil {
+		return nil, httpError.NewInternalServerError(err)
+	}
+
+	return "Successfully updated company", nil
 }
 
 // DeleteCompany handles deleting a company.
-func (h *CompanyHandler) DeleteCompany() http.HandlerFunc {
+func (h *CompanyHandler) DeleteCompany(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+
+	uuidString := mux.Vars(r)["id"]
+	companyID, err := uuid.Parse(uuidString)
+	if err != nil {
+		return nil, httpError.NewBadRequestError(err)
+	}
+
+	err = h.companyService.DeleteCompany(r.Context(), companyID)
+	if err != nil {
+		return nil, httpError.NewInternalServerError(err)
+	}
+
+	return "Successfully deleted a company", nil
+}
+
+// Handle error wraps around the custom handler func and resolves error type to a proper response.
+func handleError(f handlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
-		uuidString := mux.Vars(r)["id"]
-		companyID, err := uuid.Parse(uuidString)
+		response, err := f(w, r)
 		if err != nil {
-			h.encodeErrorWithStatus404(err, w)
-		}
+			if httpError.IsUnauthorizedError(err) {
+				w.WriteHeader(http.StatusUnauthorized)
+			} else if httpError.IsBadRequestError(err) {
+				w.WriteHeader(http.StatusBadRequest)
+			} else if httpError.IsNotFoundError(err) {
+				w.WriteHeader(http.StatusNotFound)
+			} else if httpError.IsForbiddenError(err) {
+				w.WriteHeader(http.StatusForbidden)
+			} else {
+				w.WriteHeader(http.StatusInternalServerError)
+			}
 
-		err = h.companyService.DeleteCompany(r.Context(), companyID)
-		if err != nil {
-			h.encodeErrorWithStatus500(err, w)
+			errorResponse := map[string]string{"error": err.Error()}
+			json.NewEncoder(w).Encode(errorResponse)
 			return
 		}
-
-		json.NewEncoder(w).Encode("Successfully deleted a company")
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
 	}
 }
 
@@ -170,16 +190,4 @@ func (h *CompanyHandler) ValidateModel(data interface{}) error {
 		}
 	}
 	return nil
-}
-
-func (h *CompanyHandler) encodeErrorWithStatus500(err error, w http.ResponseWriter) {
-	errorResponse := fmt.Sprintf("error: %s", err.Error())
-	w.WriteHeader(http.StatusInternalServerError)
-	w.Write([]byte(errorResponse))
-}
-
-func (h *CompanyHandler) encodeErrorWithStatus404(err error, w http.ResponseWriter) {
-	errorResponse := fmt.Sprintf("error: %s", err.Error())
-	w.WriteHeader(http.StatusBadRequest)
-	w.Write([]byte(errorResponse))
 }
