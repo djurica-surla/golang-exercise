@@ -4,11 +4,13 @@ services:
     image: postgres
     restart: always
     environment:
-      - POSTGRES_USER=myuser
-      - POSTGRES_PASSWORD=mypassword
-      - POSTGRES_DB=mydb
+      - POSTGRES_USER=testuser
+      - POSTGRES_PASSWORD=testpassword
+      - POSTGRES_DB=testdb
     ports:
       - '5432:5432'
+    volumes:
+      - /var/lib/postgresql/data
   app:
     build:
       context: ../

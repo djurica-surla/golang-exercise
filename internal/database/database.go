@@ -58,7 +58,7 @@ func Connect(
 }
 
 // Migrate makes sure database migrations are up to date.
-func Migrate(connection *sql.DB) error {
+func Migrate(connection *sql.DB, path string) error {
 	driver, err := postgres.WithInstance(connection,
 		&postgres.Config{
 			MigrationsTable: fmt.Sprintf("%s_%s", PostgresMigrationsTable, postgres.DefaultMigrationsTable),
@@ -68,7 +68,7 @@ func Migrate(connection *sql.DB) error {
 	}
 
 	// Read migration files from migrations folder in the root.
-	m, err := migrate.NewWithDatabaseInstance("file://migrations", PostgresDriver, driver)
+	m, err := migrate.NewWithDatabaseInstance(fmt.Sprintf("file://%s", path), PostgresDriver, driver)
 	if err != nil {
 		return fmt.Errorf("%s: %w", ErrReadMigration, err)
 	}

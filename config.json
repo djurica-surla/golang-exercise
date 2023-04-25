@@ -1,9 +1,9 @@
 {
+  "port": "8080",
   "postgresConfig": {
     "host": "db",
     "user": "myuser",
     "password": "mypassword",
     "dbName": "mydb"
-  },
-  "port": "8080"
+  }
 }

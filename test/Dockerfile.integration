@@ -7,8 +7,8 @@ WORKDIR /app
 # Copy the Go application source code to the container
 COPY . .
 
-#  Install gcc
-RUN apk add build-base
+# Set the CGO_ENABLED environment variable to disable CGO
+ENV CGO_ENABLED=0
 
 # Run tests and exit
-RUN go test --tags=integration ./... && exit 0 || exit 1
+CMD ["go", "test", "-v", "-tags", "integration", "./..."]

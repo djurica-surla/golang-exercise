@@ -36,7 +36,8 @@ func main() {
 	defer connection.Close()
 
 	// Run up migrations to create database schema.
-	err = database.Migrate(connection)
+	// Second argument is path to migrations file, consider the execution context.
+	err = database.Migrate(connection, "migrations")
 	if err != nil {
 		log.Fatal(err)
 	}

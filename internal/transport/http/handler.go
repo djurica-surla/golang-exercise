@@ -70,7 +70,6 @@ func (h *CompanyHandler) GetCompany(w http.ResponseWriter, r *http.Request) (int
 
 // CreateCompany handles creating a company.
 func (h *CompanyHandler) CreateCompany(w http.ResponseWriter, r *http.Request) (interface{}, error) {
-
 	var company model.CompanyCreate
 
 	err := json.NewDecoder(r.Body).Decode(&company)
@@ -131,7 +130,6 @@ func (h *CompanyHandler) UpdateCompany(w http.ResponseWriter, r *http.Request) (
 
 // DeleteCompany handles deleting a company.
 func (h *CompanyHandler) DeleteCompany(w http.ResponseWriter, r *http.Request) (interface{}, error) {
-
 	uuidString := mux.Vars(r)["id"]
 	companyID, err := uuid.Parse(uuidString)
 	if err != nil {
@@ -149,7 +147,6 @@ func (h *CompanyHandler) DeleteCompany(w http.ResponseWriter, r *http.Request) (
 // Handle error wraps around the custom handler func and resolves error type to a proper response.
 func handleError(f handlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
 		response, err := f(w, r)
 		if err != nil {
 			if httpError.IsUnauthorizedError(err) {

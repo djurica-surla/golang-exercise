@@ -55,7 +55,6 @@ func (store *CompanyStore) CreateCompany(ctx context.Context, company model.Comp
 
 // Update company updates the company in the database.
 func (store *CompanyStore) UpdateCompany(ctx context.Context, company model.CompanyCreate, companyID uuid.UUID) error {
-
 	res, err := store.db.ExecContext(ctx,
 		`UPDATE companies SET 
 		name = $1,
@@ -80,7 +79,6 @@ func (store *CompanyStore) UpdateCompany(ctx context.Context, company model.Comp
 
 // Delete company deletes the company from the database.
 func (store *CompanyStore) DeleteCompany(ctx context.Context, companyID uuid.UUID) error {
-
 	err := store.db.QueryRowContext(ctx,
 		`DELETE FROM companies
 		WHERE id = $1`, companyID).Err()
