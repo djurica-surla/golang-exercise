@@ -16,16 +16,18 @@ import (
 
 // RegisterRoutes links routes with the handler.
 func (h *CompanyHandler) RegisterRoutes(router *mux.Router) {
-	router.HandleFunc("/companies/{id}", h.GetCompanyByID()).Methods(http.MethodGet)
+	router.HandleFunc("/companies/{id}", h.GetCompany()).Methods(http.MethodGet)
 	router.HandleFunc("/companies", h.CreateCompany()).Methods(http.MethodPost)
 	router.HandleFunc("/companies/{id}", h.UpdateCompany()).Methods(http.MethodPatch)
+	router.HandleFunc("/companies/{id}", h.DeleteCompany()).Methods(http.MethodDelete)
 }
 
 // CompanyServicer represents necessary company service implementation for company handler.
 type CompanyServicer interface {
 	GetCompanyByID(ctx context.Context, companyID uuid.UUID) (model.Company, error)
-	CreateCompany(ctx context.Context, company model.CompanyCreate) error
+	CreateCompany(ctx context.Context, company model.CompanyCreate) (uuid.UUID, error)
 	UpdateCompany(ctx context.Context, company model.CompanyCreate, companyID uuid.UUID) error
+	DeleteCompany(ctx context.Context, companyID uuid.UUID) error
 }
 
 // CompanyHandler handles http requests for companies.
@@ -41,7 +43,7 @@ func NewCompanyHandler(companyService CompanyServicer) *CompanyHandler {
 }
 
 // GetCompanyById handles retrieveing company by the id.
-func (h *CompanyHandler) GetCompanyByID() http.HandlerFunc {
+func (h *CompanyHandler) GetCompany() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		uuidString := mux.Vars(r)["id"]
 		companyID, err := uuid.Parse(uuidString)
@@ -82,13 +84,13 @@ func (h *CompanyHandler) CreateCompany() http.HandlerFunc {
 			return
 		}
 
-		err = h.companyService.CreateCompany(r.Context(), company)
+		companyID, err := h.companyService.CreateCompany(r.Context(), company)
 		if err != nil {
 			h.encodeErrorWithStatus500(err, w)
 			return
 		}
 
-		json.NewEncoder(w).Encode("Successfully created a company")
+		json.NewEncoder(w).Encode(fmt.Sprintf("Successfully created a company with the id: %s", companyID))
 	}
 }
 
@@ -128,6 +130,26 @@ func (h *CompanyHandler) UpdateCompany() http.HandlerFunc {
 		}
 
 		json.NewEncoder(w).Encode("Successfully updated a company")
+	}
+}
+
+// DeleteCompany handles deleting a company.
+func (h *CompanyHandler) DeleteCompany() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		uuidString := mux.Vars(r)["id"]
+		companyID, err := uuid.Parse(uuidString)
+		if err != nil {
+			h.encodeErrorWithStatus404(err, w)
+		}
+
+		err = h.companyService.DeleteCompany(r.Context(), companyID)
+		if err != nil {
+			h.encodeErrorWithStatus500(err, w)
+			return
+		}
+
+		json.NewEncoder(w).Encode("Successfully deleted a company")
 	}
 }
 

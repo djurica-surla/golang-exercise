@@ -26,5 +26,5 @@ test-integration:
 
 # Deletes all containers and volumes for the fresh start of the app.
 docker-clean:
-	docker rm -f $(docker ps -a -q)
+	docker rm -f $(docker ps -a -q) 
 	docker volume rm $(docker volume ls -q)

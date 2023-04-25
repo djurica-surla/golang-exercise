@@ -13,12 +13,12 @@ var companyTypes = map[string]struct{}{
 
 // Represents a company.
 type Company struct {
-	ID          uuid.UUID
-	Name        string
-	Description string
-	Employees   int
-	Registered  bool
-	Type        string
+	ID          uuid.UUID `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	Employees   int       `json:"employees"`
+	Registered  bool      `json:"registered"`
+	Type        string    `json:"type"`
 }
 
 // CompanyCreate is used for company creation and input validation.

@@ -22,7 +22,7 @@ func NewCompanyStore(connection *sql.DB) *CompanyStore {
 }
 
 // Retrieves a company from the database by the id.
-func (store *CompanyStore) GetCompanyByID(ctx context.Context, companyID uuid.UUID) (model.Company, error) {
+func (store *CompanyStore) GetCompany(ctx context.Context, companyID uuid.UUID) (model.Company, error) {
 	company := model.Company{}
 
 	err := store.db.QueryRowContext(ctx,
@@ -35,38 +35,57 @@ func (store *CompanyStore) GetCompanyByID(ctx context.Context, companyID uuid.UU
 	return company, nil
 }
 
-// Creates a new company in the database.
-func (store *CompanyStore) CreateCompany(ctx context.Context, company model.CompanyCreate) error {
+// Creates a new company in the database and returns the id of the created company.
+func (store *CompanyStore) CreateCompany(ctx context.Context, company model.CompanyCreate) (uuid.UUID, error) {
+	var companyID uuid.UUID
 
 	err := store.db.QueryRowContext(ctx,
 		`INSERT INTO companies (name, description, employees, registered, type)
-		VALUES ($1, $2, $3, $4, $5)`, company.Name, company.Description, company.Employees, company.Registered, company.Type).Err()
+		VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+		company.Name, company.Description, company.Employees, company.Registered, company.Type).Scan(&companyID)
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
-			return fmt.Errorf("error creating company in the database - company with that name already exists")
+			return uuid.Nil, fmt.Errorf("error creating company in the database - company with that name already exists")
 		}
-		return fmt.Errorf("error creating company in the database %w", err)
+		return uuid.Nil, fmt.Errorf("error creating company in the database %w", err)
 	}
 
-	return nil
+	return companyID, nil
 }
 
 // Update company updates the company in the database.
 func (store *CompanyStore) UpdateCompany(ctx context.Context, company model.CompanyCreate, companyID uuid.UUID) error {
 
-	err := store.db.QueryRowContext(ctx,
+	res, err := store.db.ExecContext(ctx,
 		`UPDATE companies SET 
 		name = $1,
 		description = $2,
 		employees = $3,
 		registered = $4,
 		type = $5
-		WHERE id = $6`, company.Name, company.Description, company.Employees, company.Registered, company.Type, companyID).Err()
+		WHERE id = $6`, company.Name, company.Description, company.Employees, company.Registered, company.Type, companyID)
+	n, _ := res.RowsAffected()
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
-			return fmt.Errorf("error updating company in the database - company with that name already exists")
+			return fmt.Errorf("error creating company in the database - company with that name already exists")
 		}
 		return fmt.Errorf("error updating company in the database %w", err)
+	}
+	if n == 0 {
+		return fmt.Errorf("error updating company in the database - record doesnt exit found")
+	}
+
+	return nil
+}
+
+// Delete company deletes the company from the database.
+func (store *CompanyStore) DeleteCompany(ctx context.Context, companyID uuid.UUID) error {
+
+	err := store.db.QueryRowContext(ctx,
+		`DELETE FROM companies
+		WHERE id = $1`, companyID).Err()
+	if err != nil {
+		return fmt.Errorf("error deleting company from the database %w", err)
 	}
 
 	return nil
