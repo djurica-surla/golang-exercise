@@ -58,7 +58,6 @@ func TestMain(m *testing.M) {
 
 func TestStorage_GetCompany(t *testing.T) {
 	t.Run("should successfully get a company", func(t *testing.T) {
-
 		company := model.CompanyCreate{
 			Name:        "Some",
 			Description: "Some",
@@ -86,12 +85,10 @@ func TestStorage_GetCompany(t *testing.T) {
 		_, err := testStore.GetCompany(context.Background(), uuid.Nil)
 		require.Error(t, err)
 	})
-
 }
 
 func TestStorage_CreateCompany(t *testing.T) {
 	t.Run("should successfully create a company", func(t *testing.T) {
-
 		company := model.CompanyCreate{
 			Name:        "Some",
 			Description: "Some",
@@ -108,7 +105,6 @@ func TestStorage_CreateCompany(t *testing.T) {
 	})
 
 	t.Run("should fail to create a company due to unique name constraint", func(t *testing.T) {
-
 		company := model.CompanyCreate{
 			Name:        "Some",
 			Description: "Some",
@@ -128,7 +124,6 @@ func TestStorage_CreateCompany(t *testing.T) {
 	})
 
 	t.Run("should fail to create a company due to invalid type", func(t *testing.T) {
-
 		company := model.CompanyCreate{
 			Name:        "Some",
 			Description: "Some",
@@ -144,7 +139,6 @@ func TestStorage_CreateCompany(t *testing.T) {
 
 func TestStorage_UpdateCompany(t *testing.T) {
 	t.Run("should successfully update a company", func(t *testing.T) {
-
 		company := model.CompanyCreate{
 			Name:        "Some",
 			Description: "Some",
@@ -172,7 +166,6 @@ func TestStorage_UpdateCompany(t *testing.T) {
 	})
 
 	t.Run("should return error if nothing was updated", func(t *testing.T) {
-
 		company := model.CompanyCreate{
 			Name:        "Some",
 			Description: "Some",
@@ -231,7 +224,6 @@ func TestStorage_UpdateCompany(t *testing.T) {
 
 func TestStorage_DeleteCompany(t *testing.T) {
 	t.Run("should successfully delete a company", func(t *testing.T) {
-
 		company := model.CompanyCreate{
 			Name:        "Some",
 			Description: "Some",

@@ -1,5 +1,6 @@
 {
   "port": "8080",
+  "jwtSecretKey": "08fSROA8rl1gvj36VKNMIRO0i9WweHse",
   "postgresConfig": {
     "host": "db",
     "user": "myuser",

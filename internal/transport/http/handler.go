@@ -6,21 +6,27 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/go-playground/validator"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 
-	httpError "github.com/djurica-surla/golang-exercise/internal/errors"
+	"github.com/djurica-surla/golang-exercise/internal/middleware"
 	"github.com/djurica-surla/golang-exercise/internal/model"
 )
 
 // RegisterRoutes links routes with the handler.
 func (h *CompanyHandler) RegisterRoutes(router *mux.Router) {
-	router.HandleFunc("/companies/{id}", handleError(h.GetCompany)).Methods(http.MethodGet)
-	router.HandleFunc("/companies", handleError(h.CreateCompany)).Methods(http.MethodPost)
-	router.HandleFunc("/companies/{id}", handleError(h.UpdateCompany)).Methods(http.MethodPatch)
-	router.HandleFunc("/companies/{id}", handleError(h.DeleteCompany)).Methods(http.MethodDelete)
+	router.HandleFunc("/login", middleware.HandleError(h.Login)).Methods(http.MethodPost)
+	router.HandleFunc("/companies/{id}",
+		middleware.Chain(middleware.HandleError(h.GetCompany), middleware.Authenticate(h.tokenService))).Methods(http.MethodGet)
+	router.HandleFunc("/companies",
+		middleware.Chain(middleware.HandleError(h.CreateCompany), middleware.Authenticate(h.tokenService))).Methods(http.MethodPost)
+	router.HandleFunc("/companies/{id}",
+		middleware.Chain(middleware.HandleError(h.UpdateCompany), middleware.Authenticate(h.tokenService))).Methods(http.MethodPatch)
+	router.HandleFunc("/companies/{id}",
+		middleware.Chain(middleware.HandleError(h.DeleteCompany), middleware.Authenticate(h.tokenService))).Methods(http.MethodDelete)
 }
 
 // CompanyServicer represents necessary company service implementation for company handler.
@@ -31,25 +37,54 @@ type CompanyServicer interface {
 	DeleteCompany(ctx context.Context, companyID uuid.UUID) error
 }
 
-// Custom handler func which allows returning error so that they can be handled in once place.
-type handlerFunc func(w http.ResponseWriter, r *http.Request) (interface{}, error)
+// TokenServicer represents necessary token service implementation for company handler.
+type TokenServicer interface {
+	CreateAccessToken(accessToken model.Login) (string, error)
+	VerifyAccessToken(token string) error
+}
 
 // CompanyHandler handles http requests for companies.
 type CompanyHandler struct {
 	companyService CompanyServicer
+	tokenService   TokenServicer
 }
 
 // NewCompanyHandler creates a new instance of a company handler.
-func NewCompanyHandler(companyService CompanyServicer) *CompanyHandler {
+func NewCompanyHandler(companyService CompanyServicer, tokenService TokenServicer) *CompanyHandler {
 	return &CompanyHandler{
 		companyService: companyService,
+		tokenService:   tokenService,
 	}
 }
 
-// Message will be returned as a response.
-type Message struct {
-	Status string `json:"status"`
-	Info   string `json:"info"`
+// GetCompanyById handles retrieveing company by the id.
+func (h *CompanyHandler) Login(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	var loginInfo model.Login
+
+	err := json.NewDecoder(r.Body).Decode(&loginInfo)
+	if err != nil {
+		return nil, middleware.NewBadRequestError(err)
+	}
+
+	err = h.ValidateModel(loginInfo)
+	if err != nil {
+		return nil, middleware.NewBadRequestError(err)
+	}
+
+	accessToken, err := h.tokenService.CreateAccessToken(loginInfo)
+	if err != nil {
+		return nil, middleware.NewInternalServerErrorWrapped(err, "failed to log in")
+	}
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "accessToken",
+		Value:    accessToken,
+		HttpOnly: true,
+		Expires:  time.Now().Add(5 * time.Minute),
+		Path:     "/",
+	})
+
+	return "Logged in! Cookie has been set!", nil
 }
 
 // GetCompanyById handles retrieveing company by the id.
@@ -57,12 +92,12 @@ func (h *CompanyHandler) GetCompany(w http.ResponseWriter, r *http.Request) (int
 	uuidString := mux.Vars(r)["id"]
 	companyID, err := uuid.Parse(uuidString)
 	if err != nil {
-		return nil, httpError.NewBadRequestError(err)
+		return nil, middleware.NewBadRequestError(err)
 	}
 
 	res, err := h.companyService.GetCompanyByID(r.Context(), companyID)
 	if err != nil {
-		return nil, httpError.NewInternalServerError(err)
+		return nil, middleware.NewInternalServerError(err)
 	}
 
 	return res, nil
@@ -74,22 +109,22 @@ func (h *CompanyHandler) CreateCompany(w http.ResponseWriter, r *http.Request) (
 
 	err := json.NewDecoder(r.Body).Decode(&company)
 	if err != nil {
-		return nil, httpError.NewBadRequestError(err)
+		return nil, middleware.NewBadRequestError(err)
 	}
 
 	err = h.ValidateModel(company)
 	if err != nil {
-		return nil, httpError.NewBadRequestError(err)
+		return nil, middleware.NewBadRequestError(err)
 	}
 
 	ok, validTypes := company.IsValidType()
 	if !ok {
-		return nil, httpError.NewBadRequestError(fmt.Errorf("invalid company type, must be one of these: %s", validTypes))
+		return nil, middleware.NewBadRequestError(fmt.Errorf("invalid company type, must be one of these: %s", validTypes))
 	}
 
 	companyID, err := h.companyService.CreateCompany(r.Context(), company)
 	if err != nil {
-		return nil, httpError.NewInternalServerError(err)
+		return nil, middleware.NewInternalServerError(err)
 	}
 
 	return companyID, nil
@@ -102,27 +137,27 @@ func (h *CompanyHandler) UpdateCompany(w http.ResponseWriter, r *http.Request) (
 	uuidString := mux.Vars(r)["id"]
 	companyID, err := uuid.Parse(uuidString)
 	if err != nil {
-		return nil, httpError.NewBadRequestError(err)
+		return nil, middleware.NewBadRequestError(err)
 	}
 
 	err = json.NewDecoder(r.Body).Decode(&company)
 	if err != nil {
-		return nil, httpError.NewBadRequestError(err)
+		return nil, middleware.NewBadRequestError(err)
 	}
 
 	err = h.ValidateModel(company)
 	if err != nil {
-		return nil, httpError.NewBadRequestError(err)
+		return nil, middleware.NewBadRequestError(err)
 	}
 
 	ok, validTypes := company.IsValidType()
 	if !ok {
-		return nil, httpError.NewBadRequestError(fmt.Errorf("invalid company type, must be one of these: %s", validTypes))
+		return nil, middleware.NewBadRequestError(fmt.Errorf("invalid company type, must be one of these: %s", validTypes))
 	}
 
 	err = h.companyService.UpdateCompany(r.Context(), company, companyID)
 	if err != nil {
-		return nil, httpError.NewInternalServerError(err)
+		return nil, middleware.NewInternalServerError(err)
 	}
 
 	return "Successfully updated company", nil
@@ -133,41 +168,15 @@ func (h *CompanyHandler) DeleteCompany(w http.ResponseWriter, r *http.Request) (
 	uuidString := mux.Vars(r)["id"]
 	companyID, err := uuid.Parse(uuidString)
 	if err != nil {
-		return nil, httpError.NewBadRequestError(err)
+		return nil, middleware.NewBadRequestError(err)
 	}
 
 	err = h.companyService.DeleteCompany(r.Context(), companyID)
 	if err != nil {
-		return nil, httpError.NewInternalServerError(err)
+		return nil, middleware.NewInternalServerError(err)
 	}
 
 	return "Successfully deleted a company", nil
-}
-
-// Handle error wraps around the custom handler func and resolves error type to a proper response.
-func handleError(f handlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		response, err := f(w, r)
-		if err != nil {
-			if httpError.IsUnauthorizedError(err) {
-				w.WriteHeader(http.StatusUnauthorized)
-			} else if httpError.IsBadRequestError(err) {
-				w.WriteHeader(http.StatusBadRequest)
-			} else if httpError.IsNotFoundError(err) {
-				w.WriteHeader(http.StatusNotFound)
-			} else if httpError.IsForbiddenError(err) {
-				w.WriteHeader(http.StatusForbidden)
-			} else {
-				w.WriteHeader(http.StatusInternalServerError)
-			}
-
-			errorResponse := map[string]string{"error": err.Error()}
-			json.NewEncoder(w).Encode(errorResponse)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
-	}
 }
 
 // Validate validates a model struct using validator package.

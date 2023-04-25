@@ -12,6 +12,7 @@ import (
 	"github.com/djurica-surla/golang-exercise/internal/database"
 	"github.com/djurica-surla/golang-exercise/internal/service"
 	"github.com/djurica-surla/golang-exercise/internal/storage"
+	tokenservice "github.com/djurica-surla/golang-exercise/internal/token"
 	transporthttp "github.com/djurica-surla/golang-exercise/internal/transport/http"
 )
 
@@ -48,11 +49,16 @@ func main() {
 	// Instantiate company service.
 	companyService := service.NewCompanyService(companyStore)
 
-	// Instantiate mux router.
-	router := mux.NewRouter().StrictSlash(true)
+	tokenService, err := tokenservice.NewTokenService(cfg.JwtSecretKey)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	// Instantiate company handler.
-	handler := transporthttp.NewCompanyHandler(companyService)
+	handler := transporthttp.NewCompanyHandler(companyService, tokenService)
+
+	// Instantiate mux router.
+	router := mux.NewRouter().StrictSlash(true)
 
 	// Register routes for company handler.
 	handler.RegisterRoutes(router)

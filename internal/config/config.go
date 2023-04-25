@@ -10,6 +10,7 @@ import (
 type Config struct {
 	PostgresConfig PostgresConfig `mapstructure:"postgresConfig"`
 	Port           string         `mapstructure:"port"`
+	JwtSecretKey   string         `mapstructure:"jwtSecretKey"`
 }
 
 type PostgresConfig struct {
