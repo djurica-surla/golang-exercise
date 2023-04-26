@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 
+	httpErrors "github.com/djurica-surla/golang-exercise/internal/errors"
 	"github.com/djurica-surla/golang-exercise/internal/middleware"
 	"github.com/djurica-surla/golang-exercise/internal/model"
 )
@@ -63,17 +64,17 @@ func (h *CompanyHandler) Login(w http.ResponseWriter, r *http.Request) (interfac
 
 	err := json.NewDecoder(r.Body).Decode(&loginInfo)
 	if err != nil {
-		return nil, middleware.NewBadRequestError(err)
+		return nil, httpErrors.NewBadRequestError(err)
 	}
 
 	err = h.ValidateModel(loginInfo)
 	if err != nil {
-		return nil, middleware.NewBadRequestError(err)
+		return nil, httpErrors.NewBadRequestError(err)
 	}
 
 	accessToken, err := h.tokenService.CreateAccessToken(loginInfo)
 	if err != nil {
-		return nil, middleware.NewInternalServerErrorWrapped(err, "failed to log in")
+		return nil, httpErrors.NewInternalServerErrorWrapped(err, "failed to create access token")
 	}
 
 	http.SetCookie(w, &http.Cookie{
@@ -92,12 +93,12 @@ func (h *CompanyHandler) GetCompany(w http.ResponseWriter, r *http.Request) (int
 	uuidString := mux.Vars(r)["id"]
 	companyID, err := uuid.Parse(uuidString)
 	if err != nil {
-		return nil, middleware.NewBadRequestError(err)
+		return nil, httpErrors.NewBadRequestError(err)
 	}
 
 	res, err := h.companyService.GetCompanyByID(r.Context(), companyID)
 	if err != nil {
-		return nil, middleware.NewInternalServerError(err)
+		return nil, httpErrors.NewInternalServerError(err)
 	}
 
 	return res, nil
@@ -109,22 +110,22 @@ func (h *CompanyHandler) CreateCompany(w http.ResponseWriter, r *http.Request) (
 
 	err := json.NewDecoder(r.Body).Decode(&company)
 	if err != nil {
-		return nil, middleware.NewBadRequestError(err)
+		return nil, httpErrors.NewBadRequestError(err)
 	}
 
 	err = h.ValidateModel(company)
 	if err != nil {
-		return nil, middleware.NewBadRequestError(err)
+		return nil, httpErrors.NewBadRequestError(err)
 	}
 
 	ok, validTypes := company.IsValidType()
 	if !ok {
-		return nil, middleware.NewBadRequestError(fmt.Errorf("invalid company type, must be one of these: %s", validTypes))
+		return nil, httpErrors.NewBadRequestError(fmt.Errorf("invalid company type, must be one of these: %s", validTypes))
 	}
 
 	companyID, err := h.companyService.CreateCompany(r.Context(), company)
 	if err != nil {
-		return nil, middleware.NewInternalServerError(err)
+		return nil, httpErrors.NewInternalServerError(err)
 	}
 
 	return companyID, nil
@@ -137,27 +138,27 @@ func (h *CompanyHandler) UpdateCompany(w http.ResponseWriter, r *http.Request) (
 	uuidString := mux.Vars(r)["id"]
 	companyID, err := uuid.Parse(uuidString)
 	if err != nil {
-		return nil, middleware.NewBadRequestError(err)
+		return nil, httpErrors.NewBadRequestError(err)
 	}
 
 	err = json.NewDecoder(r.Body).Decode(&company)
 	if err != nil {
-		return nil, middleware.NewBadRequestError(err)
+		return nil, httpErrors.NewBadRequestError(err)
 	}
 
 	err = h.ValidateModel(company)
 	if err != nil {
-		return nil, middleware.NewBadRequestError(err)
+		return nil, httpErrors.NewBadRequestError(err)
 	}
 
 	ok, validTypes := company.IsValidType()
 	if !ok {
-		return nil, middleware.NewBadRequestError(fmt.Errorf("invalid company type, must be one of these: %s", validTypes))
+		return nil, httpErrors.NewBadRequestError(fmt.Errorf("invalid company type, must be one of these: %s", validTypes))
 	}
 
 	err = h.companyService.UpdateCompany(r.Context(), company, companyID)
 	if err != nil {
-		return nil, middleware.NewInternalServerError(err)
+		return nil, httpErrors.NewInternalServerError(err)
 	}
 
 	return "Successfully updated company", nil
@@ -168,12 +169,12 @@ func (h *CompanyHandler) DeleteCompany(w http.ResponseWriter, r *http.Request) (
 	uuidString := mux.Vars(r)["id"]
 	companyID, err := uuid.Parse(uuidString)
 	if err != nil {
-		return nil, middleware.NewBadRequestError(err)
+		return nil, httpErrors.NewBadRequestError(err)
 	}
 
 	err = h.companyService.DeleteCompany(r.Context(), companyID)
 	if err != nil {
-		return nil, middleware.NewInternalServerError(err)
+		return nil, httpErrors.NewInternalServerError(err)
 	}
 
 	return "Successfully deleted a company", nil

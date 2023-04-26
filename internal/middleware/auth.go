@@ -3,7 +3,6 @@ package middleware
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/djurica-surla/golang-exercise/internal/token"
@@ -17,35 +16,27 @@ type TokenServicer interface {
 // A middleware used for authorization of users.
 func Authenticate(tokenService TokenServicer) func(next http.HandlerFunc) http.HandlerFunc {
 
-	// Authenticate a user
+	// Authenticate a user.
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "application/json")
-
-			// Check if the access cookie exists
+			// Check if the access cookie exists.
 			accessToken, err := r.Cookie("accessToken")
 			if err != nil {
-				w.WriteHeader(http.StatusBadRequest)
-				errorResponse := map[string]string{"error": "missing access token cookie, login again"}
-				json.NewEncoder(w).Encode(errorResponse)
+				sendErrorReponse(w, "missing access token cookie, login again", http.StatusBadRequest)
 				return
 			}
 
 			// Verify the access token, if there is an error the token is invalid.
 			err = tokenService.VerifyAccessToken(accessToken.Value)
 			if err != nil {
-				// If its expired, validate refresh token
+				// If its expired, tell the user to login again.
 				if errors.Is(err, token.ErrExpiredToken) {
-					w.WriteHeader(http.StatusBadRequest)
-					errorResponse := map[string]string{"error": "login again! access token has expired"}
-					json.NewEncoder(w).Encode(errorResponse)
+					sendErrorReponse(w, "login again! access token has expired", http.StatusBadRequest)
 					return
 
 				} else {
-					// If access token is invalid, return error
-					w.WriteHeader(http.StatusUnauthorized)
-					errorResponse := map[string]string{"error": fmt.Sprintf("could not verify access token cookie: %s", err.Error())}
-					json.NewEncoder(w).Encode(errorResponse)
+					// If access token is invalid, return error.
+					sendErrorReponse(w, "could not verify access token cookie", http.StatusBadRequest)
 					return
 				}
 
@@ -53,4 +44,15 @@ func Authenticate(tokenService TokenServicer) func(next http.HandlerFunc) http.H
 			next.ServeHTTP(w, r)
 		})
 	}
+}
+
+// sendErrorResponse encode the error and code into error response and sends it back.
+func sendErrorReponse(w http.ResponseWriter, message string, code int) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	errorResponse := ErrorResponse{
+		Message: message,
+		Code:    code,
+	}
+	json.NewEncoder(w).Encode(errorResponse)
 }

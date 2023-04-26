@@ -78,7 +78,8 @@ func (t *tokenService) VerifyAccessToken(token string) error {
 		return ErrInvalidToken
 	}
 
-	// Convert the token to payload
+	// Convert the token to payload.
+	// Payload can be returned and used, but in this case we just check if its valid.
 	_, ok := jwtToken.Claims.(*AccessTokenPayload)
 	if !ok {
 		return ErrInvalidToken

@@ -9,13 +9,14 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/djurica-surla/golang-exercise/internal/mock"
-	"github.com/djurica-surla/golang-exercise/internal/model"
-	transporthttp "github.com/djurica-surla/golang-exercise/internal/transport/http"
 	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/require"
+
+	"github.com/djurica-surla/golang-exercise/internal/mock"
+	"github.com/djurica-surla/golang-exercise/internal/model"
+	transporthttp "github.com/djurica-surla/golang-exercise/internal/transport/http"
 )
 
 var (

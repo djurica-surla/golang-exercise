@@ -79,11 +79,15 @@ func (store *CompanyStore) UpdateCompany(ctx context.Context, company model.Comp
 
 // Delete company deletes the company from the database.
 func (store *CompanyStore) DeleteCompany(ctx context.Context, companyID uuid.UUID) error {
-	err := store.db.QueryRowContext(ctx,
+	res, err := store.db.ExecContext(ctx,
 		`DELETE FROM companies
-		WHERE id = $1`, companyID).Err()
+		WHERE id = $1`, companyID)
 	if err != nil {
 		return fmt.Errorf("error deleting company from the database %w", err)
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return fmt.Errorf("error deleting company from the database - record doesnt exit found")
 	}
 
 	return nil
